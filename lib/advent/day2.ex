@@ -5,6 +5,7 @@ defmodule Advent.Day2 do
     ids = parse_instructions()
     IO.puts("Part One: #{get_checksum(ids)}")
     IO.puts("Part Two: #{get_common_id_chars(ids)}")
+    IO.puts("Part Two (improved): #{find_close_id_chars(ids)}")
   end
 
   ## Part 1 ##
@@ -84,14 +85,10 @@ defmodule Advent.Day2 do
     |> Enum.with_index()
     |> Enum.reduce({0, true, ""}, &compare_string_chars(&1, &2, second))
 
-    if result == true do
-      IO.puts first
-      IO.puts second
-    end
     {result, common_chars}
   end
 
-  defp compare_string_chars({char, index}, {1, true, common_chars} = acc, other_string) do
+  defp compare_string_chars({char, index}, {1, true, common_chars}, other_string) do
     case char == String.at(other_string, index) do
       true -> {1, true, common_chars <> char}
       false -> {2, false, common_chars}
@@ -104,6 +101,32 @@ defmodule Advent.Day2 do
     end
   end
   defp compare_string_chars(_, {2, false, _} = acc, _), do: acc
+
+  ## Part 2, but cleaner and simpler ##
+
+  defp find_close_id_chars([id | rest], dict \\ %{}) do
+    case search_id_permutations(id, dict) do
+      {:found, chars} -> chars
+      {:cont, prev_dict, new_dict} ->
+        find_close_id_chars(rest, Map.merge(prev_dict, new_dict))
+    end
+  end
+
+  defp search_id_permutations(id, dict) do
+    Range.new(0, String.length(id) - 1)
+    |> Enum.reduce_while({:cont, dict, %{}}, &collect_permutation(&1, &2, id))
+  end
+
+  defp collect_permutation(index, {_, prev_dict, new_dict}, id) do
+    head = id |> String.slice(0, index)
+    tail = id |> String.slice(index + 1, String.length(id))
+
+    permutation = head <> tail
+    case Map.get(prev_dict, permutation) do
+      true -> {:halt, {:found, permutation}}
+      nil -> {:cont, {:cont, prev_dict, new_dict |> Map.put(permutation, true)}}
+    end
+  end
 
   ## Shared ##
 
