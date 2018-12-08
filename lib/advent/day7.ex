@@ -91,10 +91,20 @@ defmodule Advent.Day7.Scheduler do
 
   def all_inactive?(%__MODULE__{working: working}), do: Enum.empty?(working)
 
-  def can_start_worker?(%__MODULE__{inactive: []}), do: false
-  def can_start_worker?(_), do: true
+  def spawn_workers(scheduler, [], _), do: {scheduler, []}
+  def spawn_workers(scheduler, [node_id | rest] = queue, iteration) do
+    case can_start_worker?(scheduler) do
+      false -> {scheduler, queue}
+      true ->
+        start_worker(scheduler, node_id, iteration)
+        |> spawn_workers(rest, iteration)
+    end
+  end
 
-  def start_worker(%__MODULE__{inactive: inactive, working: working}, node_id, time) do
+  defp can_start_worker?(%__MODULE__{inactive: []}), do: false
+  defp can_start_worker?(_), do: true
+
+  defp start_worker(%__MODULE__{inactive: inactive, working: working}, node_id, time) do
     params = %{node_id: node_id, duration: get_duration_for_node(node_id), start_time: time}
     worker = inactive
     |> Enum.at(0)
@@ -180,12 +190,10 @@ defmodule Advent.Day7 do
   end
 
   defp concurrently_traverse_graph(graph, scheduler, queue, iteration \\ 0) do
-    IO.puts("Iteration:#{iteration}")
-
     {scheduler, node_ids} = Scheduler.receive(scheduler, iteration)
     graph = visit_nodes(graph, node_ids)
     queue = enqueue_valid_children(graph, node_ids, queue)
-    {scheduler, queue} = schedule_next(scheduler, queue, iteration)
+    {scheduler, queue} = Scheduler.spawn_workers(scheduler, queue, iteration)
 
     case completed_concurrent_traversal?(graph, scheduler) do
       true -> iteration
@@ -209,16 +217,6 @@ defmodule Advent.Day7 do
     |> sort_node_keys()
 
     enqueue_valid_children(graph, rest, queue)
-  end
-
-  defp schedule_next(scheduler, [], _), do: {scheduler, []}
-  defp schedule_next(scheduler, [node_id | rest] = queue, iteration) do
-    case Scheduler.can_start_worker?(scheduler) do
-      false -> {scheduler, queue}
-      true ->
-        scheduler = Scheduler.start_worker(scheduler, node_id, iteration)
-        schedule_next(scheduler, rest, iteration)
-    end
   end
 
   defp completed_concurrent_traversal?(graph, scheduler) do
