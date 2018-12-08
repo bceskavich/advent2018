@@ -1,5 +1,5 @@
 # Holds cell distance state
-defmodule Cell do
+defmodule Advent.Day6.Cell do
   defstruct [
     id: nil,
     dist: nil,
@@ -19,7 +19,9 @@ defmodule Cell do
 end
 
 # Owns large matrix
-defmodule Graph do
+defmodule Advent.Day6.Graph do
+  alias Advent.Day6.Cell
+
   defstruct cells: [[]]
 
   def new(%{max: {max_x, max_y}, min: {min_x, min_y}}) do
@@ -54,6 +56,8 @@ defmodule Graph do
 end
 
 defmodule Advent.Day6 do
+  alias Advent.Day6.{Graph, Cell}
+
   @instructions "files/day6.txt"
 
   def run() do
